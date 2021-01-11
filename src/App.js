@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect} from 'react';
+import axios from "axios";
 import edit from './images/edit.svg';
 import done from './images/done.svg';
 import deleteIcon from './images/close.svg';
@@ -8,19 +9,36 @@ function App() {
   const [arrayTasks, setArrayTasks] = useState([]);
   const [activeTaskEdit, setActiveTaskEdit] = useState(null);
   const [value, setValue] = useState('');
+  const limit = 5;
 
-  function addNewTask() {
-    setValue('');
-    setArrayTasks([...arrayTasks, {text: value, isCheck: false}]);
+  useEffect(() => {
+    const apiUrl = `http://localhost:8000/allTasks?limit=5&offset=0`;
+    axios.get(apiUrl).then((resp) => {
+      const tasks = resp.data.data;
+      setArrayTasks(tasks);
+    });
+  }, [setArrayTasks]);
+
+  async function addNewTask() {
+    const apiUrl = 'http://localhost:8000/createTask';
+    await axios.post(apiUrl, {text: value, isCheck: false}).then((resp) => {
+      setValue('');
+      setArrayTasks([...arrayTasks, {text: value, isCheck: false}]);
+    });
     // localStorage.setItem('tasks', JSON.stringify(arrayValues));
   }
   
-  function changeCheckbox(index) {
-    setArrayTasks(arrayTasks.map((item, i) => 
-      i === index 
-      ? {...item, isCheck : !item.isCheck} 
-      : item 
-    ));
+  async function changeCheckbox(index) {
+    const apiUrl = 'http://localhost:8000/updateTask';
+    const body = arrayTasks[index];
+    body.isCheck = !body.isCheck;
+    await axios.patch(apiUrl, body).then(resp => {
+      setArrayTasks(arrayTasks.map((item, i) => 
+        i === index 
+        ? {...item, isCheck : !item.isCheck} 
+        : item 
+      ));
+    });
     // localStorage.setItem('tasks', JSON.stringify(arrayTasks));
   }
   
@@ -33,15 +51,21 @@ function App() {
     ));
   }
   
-  function deleteTask(index) {
-    let newArr = [...arrayTasks];
-    newArr.splice(index, 1);
-    setArrayTasks(newArr);
+  async function deleteTask(index) {
+    const apiUrl = `http://localhost:8000/deleteTask?_id=${arrayTasks[index]._id}`;
+    await axios.delete(apiUrl).then(resp => {
+      let newArr = [...arrayTasks];
+      newArr.splice(index, 1);
+      setArrayTasks(newArr);
+    });
     // localStorage.setItem('tasks', JSON.stringify(arrayTasks));
   }
   
-  function doneEditTask() {
-    setActiveTaskEdit(null)
+  async function doneEditTask() {
+    const apiUrl = 'http://localhost:8000/updateTask';
+    await axios.patch(apiUrl, arrayTasks[activeTaskEdit]).then(resp => {
+      setActiveTaskEdit(null);
+    });
     // localStorage.setItem('tasks', JSON.stringify(arrayTasks));
   }
 
